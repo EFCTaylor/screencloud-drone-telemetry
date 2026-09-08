@@ -13,7 +13,6 @@ Drone telemetry must be ingested in a format that supports nested data, such as 
 Each inbound message represents exactly one telemetry event encoded as JSON. It has a shared envelope containing:
 
 - `eventId`: a producer-generated, immutable UUID
-- `schemaVersion`
 - `droneId`
 - `timestamp`
 - `eventType`
@@ -26,4 +25,4 @@ JSON is common, straightforward to parse, and supports nested data without unnec
 
 ## Consequences
 
-Producers must follow the defined event schema. The `eventId` supports idempotent persistence, but does not prevent duplicate transport delivery.
+Producers must follow the defined event schema. The `eventId` supports idempotent persistence, but does not prevent duplicate transport delivery. Versioning and backward compatibility are production considerations outside this challenge's scope.

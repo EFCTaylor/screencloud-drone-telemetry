@@ -26,4 +26,4 @@ Separate schemas enforce the correct required fields for each event type while k
 
 ## Consequences
 
-Adding an event type requires its own schema and transformation behaviour. `schemaVersion` provides an explicit future evolution path.
+Adding an event type requires its own schema and transformation behaviour. Schema versioning and backward compatibility are deferred production considerations.
