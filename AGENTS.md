@@ -2,15 +2,16 @@
 
 ## Current State
 
-- This is currently a design-and-backlog scaffold: there is no application source, root package manifest or lockfile, test configuration, Serverless configuration, Docker configuration, CI workflow, or verified application command.
-- Node.js `v24.20.0` is pinned in `.nvmrc`; the accepted implementation language is JavaScript, not TypeScript.
-- Treat `README.md` as an unfinished template. Its bracketed sections, sample event, and commands such as `npm test`, `npm run dev`, and `docker compose up -d` are not implementation truth.
+- T-001 has bootstrapped the root Node.js project and Jest unit-test setup. Telemetry behaviour, Serverless configuration, Docker configuration, integration tests, and CI are not implemented yet.
+- Node.js `v20.20.2` is pinned in `.nvmrc` for Serverless Framework v3 Lambda runtime compatibility; the accepted implementation language is JavaScript, not TypeScript.
+- `npm ci` installs the pinned dependencies and `npm test` runs unit tests. The integration script exists but has no tests until T-006; README commands such as `npm run dev` and `docker compose up -d` remain unverified template content.
+- Application modules belong in `src/`, unit tests in `test/unit/`, and LocalStack integration tests in `test/integration/`.
 - Files under `.opencode/` configure OpenCode; any manifest or lockfile there is not the application package manifest.
 
 ## Decision And Ticket Workflow
 
 - The 12 accepted files in `docs/adr/` are authoritative. Do not silently change or bypass them; ask the user when implementation exposes a conflict or material undecided choice.
-- Work is ordered in `docs/tickets/README.md`; all tickets are currently `Draft`. Implement only a user-approved ticket after reading it and every linked ADR.
+- Work is ordered and status-tracked in `docs/tickets/README.md`. Implement only a user-approved ticket after reading it and every linked ADR.
 - Present items under `Implementation Choices Requiring Approval` before editing when they affect dependencies, interfaces, scope, or implementation direction.
 - Keep unit tests with the ticket that introduces the behaviour. Report changed files, verification results, assumptions, and unresolved risks after implementation.
 - Do not mark a ticket `Done`; only the user accepts completed work.

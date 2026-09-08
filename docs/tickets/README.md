@@ -14,7 +14,7 @@ The user approves a ticket before implementation and decides when it is done. An
 
 | Ticket | Title | Depends On | Status |
 | --- | --- | --- | --- |
-| [T-001](T-001-project-bootstrap.md) | Bootstrap the Node.js project | None | Draft |
+| [T-001](T-001-project-bootstrap.md) | Bootstrap the Node.js project | None | Done |
 | [T-002](T-002-validation-and-transformation.md) | Validate and transform telemetry events | T-001 | Draft |
 | [T-003](T-003-dynamodb-persistence.md) | Implement idempotent DynamoDB persistence | T-001, T-002 | Draft |
 | [T-004](T-004-sqs-consumer-and-error-routing.md) | Implement the SQS consumer and error routing | T-002, T-003 | Draft |

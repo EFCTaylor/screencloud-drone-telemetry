@@ -1,0 +1,26 @@
+{
+  "name": "screencloud-drone-telemetry",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Event-driven telemetry pipeline for autonomous drones",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20.20.2 <21"
+  },
+  "packageManager": "npm@10.8.2",
+  "scripts": {
+    "test": "jest test/unit",
+    "test:integration": "jest test/integration --runInBand"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "3.1128.0",
+    "@aws-sdk/client-sqs": "3.1128.0",
+    "@aws-sdk/lib-dynamodb": "3.1128.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "jest": "30.5.1",
+    "serverless": "3.40.0",
+    "serverless-localstack": "1.4.0"
+  }
+}

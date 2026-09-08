@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Done
 
 ## Dependencies
 
@@ -52,4 +52,10 @@ Update `AGENTS.md` with the project structure and commands that are verified dur
 
 ## Completion Notes
 
-To be completed after implementation and review.
+- Selected CommonJS to keep Jest and Lambda configuration straightforward.
+- Added exact dependency versions and a committed npm lockfile.
+- Pinned Node.js `v20.20.2` because Serverless Framework 3.40 supports Lambda runtimes only through `nodejs20.x`; this avoids Serverless Framework v4 login requirements at the cost of using an end-of-life runtime for the challenge.
+- Established `src/`, `test/unit/`, and `test/integration/`.
+- Verified `npm ci`, `npm test`, `npm run test:integration -- --help`, and the local Serverless executable.
+- `npm audit --omit=dev` reports no runtime dependency vulnerabilities. The Serverless v3 and LocalStack plugin development dependency tree reports 11 audit findings and deprecated transitive packages; upgrading automatically would require the unapproved Serverless v4 major version and would not remove all plugin findings.
+- Accepted by the user on 2026-09-08 with the documented Node.js 20 and Serverless Framework v3 trade-offs.

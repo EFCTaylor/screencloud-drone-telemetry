@@ -97,15 +97,17 @@ The schema is designed with potential access patterns in mind, including:
 
 ### Language
 
-[TypeScript / JavaScript]
+JavaScript on Node.js 20.
 
-I chose [language] because [reason].
+Although the brief prefers TypeScript, I chose JavaScript because it is the language I currently work with. This keeps the time-boxed implementation focused on pipeline reliability, architecture, and testing. Zod provides runtime schema validation where JavaScript does not provide static type enforcement.
 
 ### Infrastructure
 
-[Docker / Docker Compose / Terraform / other approach]
+The planned infrastructure uses Serverless Framework v3, Docker Compose, and LocalStack. Serverless will define the Lambda, queues, and DynamoDB resources once, while Docker Compose will start LocalStack for local development.
 
-The application can be run locally without requiring access to a deployed cloud environment.
+Serverless Framework v3 is retained so reviewers can use the project without a Serverless account or license key. It supports Lambda runtimes only through Node.js 20, so this repository pins Node.js `v20.20.2`. Node.js 20 is end-of-life and the Serverless v3/LocalStack plugin development dependency tree has known audit findings; this is an accepted challenge-only trade-off, not a production recommendation. In production I would use a supported Node.js runtime and current deployment tooling.
+
+The infrastructure and Docker configuration will be implemented in T-005. They are not runnable yet.
 
 ### Testing
 
@@ -125,7 +127,7 @@ External infrastructure dependencies are mocked where appropriate so that the co
 
 ### Prerequisites
 
-- Node.js [version]
+- Node.js `v20.20.2`
 - npm
 - Docker
 - Docker Compose
@@ -142,7 +144,7 @@ cd <repository-name>
 Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 ### Start Local Dependencies
