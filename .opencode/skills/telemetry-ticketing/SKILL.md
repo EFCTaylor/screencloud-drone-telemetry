@@ -16,9 +16,11 @@ Before creating or implementing a ticket, read:
 1. `AGENTS.md`
 2. `challengedetails.txt`
 3. Relevant files in `docs/adr/`
-4. Existing files in `docs/tickets/`, if present
+4. The active backlog and tickets directly under `docs/tickets/`, if present
 
 Accepted ADRs are authoritative. Do not silently change, reinterpret, or work around them. If an ADR is ambiguous, inconsistent, or prevents a ticket from being completed, stop and ask the user for a decision. Propose an ADR only when the decision is significant and durable.
+
+`docs/tickets/original-plan/` is a historical snapshot. It may be read to understand scope refinement, but it is never an implementation source and must not be updated. When active and archived tickets differ, follow the active ticket directly under `docs/tickets/`.
 
 ## Ticket Workflow
 
@@ -26,7 +28,7 @@ Use these states:
 
 `Draft` -> `Ready` -> `In Progress` -> `Review` -> `Done`
 
-Create tickets in `docs/tickets/` with a sequential identifier, concise title, dependencies, related ADRs, scope, explicit exclusions, acceptance criteria, verification commands, and completion notes.
+Create active tickets directly in `docs/tickets/` with a sequential identifier, concise title, dependencies, related ADRs, scope, explicit exclusions, acceptance criteria, verification commands, and completion notes.
 
 Each ticket must be independently understandable and small enough to review in one focused pass. Keep dependent work in order. Do not assign overlapping implementation work in parallel unless the tickets have separate files and stable interfaces.
 

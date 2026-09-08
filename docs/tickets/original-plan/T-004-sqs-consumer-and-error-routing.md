@@ -19,11 +19,9 @@ Draft
 
 ## Scope
 
-Implement a thin Lambda handler that processes SQS records sequentially and independently, then returns an SQS partial batch response. Sequential processing is deliberate: it keeps control flow and per-record acknowledgement behaviour obvious for this challenge.
+Implement a thin Lambda handler that processes SQS records independently and returns an SQS partial batch response.
 
-Persist valid events, acknowledge duplicate events, and publish malformed or schema-invalid events to the quarantine queue. A quarantine message contains `sourceMessageId`, `eventId` when available, the raw source message, and a safe reason containing an error code and validation issues.
-
-Use a small local helper with built-in console output for structured JSON logs. Do not add a logging dependency.
+Persist valid events, acknowledge duplicate events, and publish malformed or schema-invalid events to the quarantine queue. A quarantine message must contain the raw source message, a safe structured failure reason, the source SQS `messageId`, and the domain `eventId` when available.
 
 ## Acceptance Criteria
 
@@ -48,11 +46,13 @@ Use a small local helper with built-in console output for structured JSON logs. 
 ## Implementation Choices Requiring Approval
 
 - Exact quarantine message envelope
-- Safe error code names used by quarantine messages and logs
+- Sequential or bounded-concurrent record processing
+- Logging implementation and safe error code names
 
 ## Verification
 
 - `npm test -- handler`
+- `npm test -- logging`
 
 ## Completion Notes
 

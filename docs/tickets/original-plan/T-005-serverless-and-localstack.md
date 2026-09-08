@@ -22,7 +22,7 @@ Draft
 
 ## Scope
 
-Define only the required Lambda, main telemetry queue, quarantine queue, DLQ, event-source mapping, DynamoDB table, both GSIs, redrive policy, and least-privilege Lambda permissions in one Serverless Framework configuration.
+Define the Lambda, main telemetry queue, quarantine queue, DLQ, event-source mapping, DynamoDB table, both GSIs, redrive policy, and least-privilege Lambda permissions in one Serverless Framework configuration.
 
 Add Docker Compose configuration that starts LocalStack. Configure the LocalStack Serverless plugin so the same resource definition can be deployed locally.
 
@@ -35,7 +35,7 @@ Add Docker Compose configuration that starts LocalStack. Configure the LocalStac
 - Lambda permissions are limited to source-queue consumption, quarantine publication, required DynamoDB writes, and scoped logging.
 - A producer send-only IAM policy is defined or documented without granting read or database permissions.
 - Docker Compose starts a healthy LocalStack container.
-- Serverless can validate and package the AWS configuration, and its LocalStack stage points the same resource definition at LocalStack.
+- Serverless can validate/package the AWS configuration and deploy the same resources to LocalStack.
 
 ## Out Of Scope
 
@@ -58,7 +58,7 @@ Add Docker Compose configuration that starts LocalStack. Configure the LocalStac
 - `npx serverless package`
 - `docker compose config`
 - `docker compose up -d`
-- Document the LocalStack deployment command for the strategy in T-006; automated service verification is deferred.
+- LocalStack deployment command established by T-001
 
 ## Completion Notes
 

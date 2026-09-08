@@ -17,7 +17,7 @@ Draft
 
 ## Scope
 
-Implement one small DynamoDB persistence module using AWS SDK v3. Persist the validated event document with `eventId` as the table primary key and a conditional write that prevents an existing event from being overwritten. Do not add a generic repository interface or persistence framework.
+Implement a small DynamoDB repository using AWS SDK v3. Persist transformed telemetry with `eventId` as the table primary key and a conditional write that prevents an existing event from being overwritten.
 
 Populate the drone history index attributes for every event. Populate `errorIndexPk` with `ERROR` only for `HEALTH_STATUS_UPDATE` events whose status is `WARNING` or `CRITICAL`.
 
@@ -27,7 +27,7 @@ Populate the drone history index attributes for every event. Populate `errorInde
 - A conditional-check failure caused by an existing `eventId` is returned as a successful duplicate no-op.
 - Throttling, connectivity, permission, and unexpected DynamoDB errors remain retryable failures.
 - Stored records contain the attributes required by the drone history and sparse error GSIs.
-- A conditional-check failure is handled separately from every other DynamoDB error; other errors are allowed to propagate for retry handling in T-004.
+- AWS errors are classified without exposing raw telemetry in logs or returned diagnostics.
 - Unit tests cover successful writes, duplicate writes, and retryable DynamoDB failures.
 
 ## Out Of Scope
@@ -35,17 +35,18 @@ Populate the drone history index attributes for every event. Populate `errorInde
 - Query HTTP endpoints
 - Updates to persisted telemetry
 - A separate idempotency table
-- Detecting conflicting content when a producer reuses an existing `eventId`
 - TTL, archival, analytics, or retention policies
 - Production partition time-bucketing
 
 ## Implementation Choices Requiring Approval
 
-- A minimal return shape that distinguishes a stored event from a duplicate
+- Whether to store the complete validated `telemetryData` document or flatten event-specific fields
+- Behaviour when one `eventId` is reused with different event content
+- Exact repository return values and error categories
 
 ## Verification
 
-- `npm test -- persistence`
+- `npm test -- repository`
 
 ## Completion Notes
 

@@ -26,12 +26,12 @@ Perform a final review of the implementation against the challenge requirements,
 ## Acceptance Criteria
 
 - Every README command has been executed successfully from the implemented project.
-- Installation, LocalStack startup, resource deployment, example message publication, and unit-testing instructions are complete.
+- Installation, LocalStack startup, resource deployment, example message publication, unit testing, and integration testing instructions are complete.
 - The example telemetry events satisfy the implemented schemas and include `eventId`.
 - DynamoDB access patterns and idempotency behaviour are explained accurately.
 - Quarantine, at-least-once delivery, retry, partial batch failure, and DLQ behaviour are clearly distinguished.
 - The JavaScript choice and TypeScript trade-off are explained.
-- Least-privilege permissions and the proposed LocalStack integration-testing strategy and limitations are documented without claiming automated integration coverage.
+- Least-privilege permissions and LocalStack test limitations are documented.
 - Production considerations describe rather than implement deferred functionality.
 - The AI usage section explains that the user made architectural decisions and approved ticket-scoped agent work.
 - `AGENTS.md` contains the final verified repository structure and commands.
@@ -56,6 +56,7 @@ Perform a final review of the implementation against the challenge requirements,
 - `npm test`
 - `docker compose up -d`
 - LocalStack deployment command established by T-005
+- `npm run test:integration`
 - Manual cross-check of README claims against code and ADRs
 
 ## Completion Notes

@@ -17,7 +17,7 @@ Draft
 
 ## Scope
 
-Implement a small module that parses one JSON message body and validates its shared envelope and event-specific `telemetryData`. The parsed Zod result is the storage-ready event; transformation is limited to returning that validated structure rather than introducing a separate mapping framework.
+Implement pure functions that parse one JSON message body, validate its shared envelope, validate event-specific `telemetryData`, and transform valid input into a consistent persistence model.
 
 Support these event types:
 
@@ -34,7 +34,7 @@ Return structured validation diagnostics containing safe field paths and rules w
 - The shared envelope requires a UUID `eventId`, `droneId`, ISO-8601 `timestamp`, and recognized `eventType`.
 - Zod uses `eventType` to select the correct event-specific schema.
 - Missing required fields, malformed JSON, unknown event types, and invalid field values are rejected as permanent data failures.
-- A valid event returns a storage-ready object containing only validated fields without mutating the input.
+- A valid event is transformed without mutating the input.
 - Unknown or unvalidated payload fields are not persisted accidentally.
 - Unit tests cover valid and invalid examples for all five event types.
 - Unit tests confirm diagnostics do not contain telemetry values.
@@ -53,10 +53,12 @@ Return structured validation diagnostics containing safe field paths and rules w
 - Exact health status enum values
 - Strict rejection or stripping of unknown fields
 - Battery, coordinate, and identifier constraints
+- Exact normalized persistence shape, coordinated with T-003
 
 ## Verification
 
-- `npm test -- telemetry`
+- `npm test -- validation`
+- `npm test -- transformation`
 
 ## Completion Notes
 

@@ -42,3 +42,21 @@ These are not assumed to be unnecessary in every environment. They are deferred 
 After accepting the ADRs, I translated them into the ordered tickets in [`docs/tickets`](tickets/README.md). Agents receive ticket-scoped work, must surface material implementation choices for my approval, and cannot mark a ticket complete. The committed [telemetry ticketing skill](../.opencode/skills/telemetry-ticketing/SKILL.md) records these prompting and implementation constraints.
 
 This keeps architectural ownership with me while using AI for challenge, implementation assistance, verification, and independent review.
+
+## Addendum: Post-Design Scope Review
+
+After completing T-001, I reviewed the original backlog against the challenge's 3-4 hour guideline. The original plan was valid, but it included implementation depth beyond the brief, particularly a full automated LocalStack integration suite. The brief requires unit tests for core processing and a description of the integration-testing approach; it does not require implemented integration tests or a deployed environment.
+
+I therefore revised the active tickets on 2026-09-08. The original tickets are preserved in [`docs/tickets/original-plan`](tickets/original-plan/ARCHIVE.md) as evidence of the initial planning output.
+
+The revised plan retains the architecture and its important reliability behaviour while simplifying implementation:
+
+- Zod validation output becomes the storage-ready event rather than passing through a generic transformation framework.
+- DynamoDB access uses a direct, small persistence module rather than a reusable repository abstraction.
+- SQS records are processed sequentially so partial batch behaviour remains obvious.
+- Structured logging uses a small JSON helper and built-in console output rather than a logging dependency.
+- Infrastructure remains one Serverless definition and one Docker Compose file.
+- Automated LocalStack integration tests are deferred; the README will document concrete scenarios and the limits of the proposed approach.
+- Unit tests remain mandatory for validation, persistence outcomes, quarantine routing, and mixed-batch failure handling.
+
+This refinement is an application of KISS and YAGNI rather than a change to the accepted event-driven architecture. Production capabilities continue to be documented instead of implemented speculatively.
