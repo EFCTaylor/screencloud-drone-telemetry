@@ -17,7 +17,7 @@ The user approves a ticket before implementation and decides when it is done. An
 | Ticket | Title | Depends On | Status |
 | --- | --- | --- | --- |
 | [T-001](T-001-project-bootstrap.md) | Bootstrap the Node.js project | None | Done |
-| [T-002](T-002-validation-and-transformation.md) | Validate and transform telemetry events | T-001 | Draft |
+| [T-002](T-002-validation-and-transformation.md) | Validate and transform telemetry events | T-001 | Done |
 | [T-003](T-003-dynamodb-persistence.md) | Implement idempotent DynamoDB persistence | T-001, T-002 | Draft |
 | [T-004](T-004-sqs-consumer-and-error-routing.md) | Implement the SQS consumer and error routing | T-002, T-003 | Draft |
 | [T-005](T-005-serverless-and-localstack.md) | Define Serverless and LocalStack infrastructure | T-001, T-003, T-004 | Draft |
@@ -31,6 +31,7 @@ The user approves a ticket before implementation and decides when it is done. An
 - Implement one approved ticket at a time unless the user explicitly approves parallel work.
 - Keep unit tests in the ticket that introduces the behaviour.
 - Prefer the smallest clear implementation that meets the acceptance criteria.
+- Keep code straightforward and readable; avoid unnecessary abstractions, indirection, and cleverness that make behaviour harder to understand.
 - Do not change an accepted architectural decision while implementing a ticket.
 - Report changed files, verification results, assumptions, and unresolved risks before requesting review.
 - Do not mark a ticket `Done`; that decision belongs to the user.

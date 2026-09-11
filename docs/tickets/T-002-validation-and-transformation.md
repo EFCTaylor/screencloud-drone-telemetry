@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Done
 
 ## Dependencies
 
@@ -50,9 +50,9 @@ Return structured validation diagnostics containing safe field paths and rules w
 
 ## Implementation Choices Requiring Approval
 
-- Exact health status enum values
-- Strict rejection or stripping of unknown fields
-- Battery, coordinate, and identifier constraints
+- Health status values are `HEALTHY`, `WARNING`, and `CRITICAL`.
+- Unknown envelope and telemetry fields are stripped from validated events.
+- Battery level is constrained to 0-100, latitude to -90-90, longitude to -180-180, and drone and delivery identifiers must be non-empty.
 
 ## Verification
 
@@ -60,4 +60,7 @@ Return structured validation diagnostics containing safe field paths and rules w
 
 ## Completion Notes
 
-To be completed after implementation and review.
+- Added `src/telemetry.js` with JSON parsing, event-specific Zod validation, unknown-field stripping, and safe structured diagnostics.
+- Added unit coverage for valid and invalid examples of all five event types, envelope validation, malformed JSON, unknown-field handling, input immutability, and diagnostic safety.
+- `npm test -- telemetry` and the complete `npm test` unit suite pass on the pinned Node.js `v20.20.2` runtime (19 tests).
+- Manually invoked `parseTelemetryEvent` with a valid `BATTERY_UPDATE` JSON message and confirmed it returned the expected storage-ready event with `success: true`.
