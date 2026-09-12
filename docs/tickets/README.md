@@ -19,7 +19,7 @@ The user approves each ticket before work starts and decides when it is done. If
 | [T-001](T-001-project-bootstrap.md) | Set up the Node.js project | None | Done |
 | [T-002](T-002-validation-and-transformation.md) | Parse and validate telemetry events | T-001 | Done |
 | [T-003](T-003-dynamodb-persistence.md) | Save telemetry events in DynamoDB | T-001, T-002 | Done |
-| [T-004](T-004-sqs-consumer-and-error-routing.md) | Process SQS messages and handle failures | T-002, T-003 | Draft |
+| [T-004](T-004-sqs-consumer-and-error-routing.md) | Process SQS messages and handle failures | T-002, T-003 | Review |
 | [T-005](T-005-serverless-and-localstack.md) | Set up AWS resources and LocalStack | T-001, T-003, T-004 | Draft |
 | [T-006](T-006-integration-test-strategy.md) | Explain the LocalStack integration-test approach | T-003, T-004, T-005 | Draft |
 | [T-007](T-007-documentation-and-final-review.md) | Finish the documentation and final review | T-001 through T-006 | Draft |

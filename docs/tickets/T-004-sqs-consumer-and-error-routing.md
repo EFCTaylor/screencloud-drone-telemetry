@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Review
 
 ## Dependencies
 
@@ -41,14 +41,15 @@ Add a small local helper that writes structured JSON logs with the built-in cons
 
 - Guaranteeing that a quarantine message is sent exactly once
 - Extra infrastructure for preventing duplicate quarantine messages
+- Handling source messages so large that wrapping the raw message and validation details would exceed the SQS message-size limit; telemetry messages are assumed to remain comfortably below that limit
 - Tests of SQS automatically polling messages, timing message visibility, or automatically moving messages to the DLQ
 - Custom metrics, dashboards, alarms, or tracing
 - Manual replay tooling
 
 ## Implementation Choices Requiring Approval
 
-- Decide the exact fields in a quarantine message.
-- Decide the safe error-code names used in quarantine messages and logs.
+- Quarantine messages use `{ sourceMessageId, eventId?, sourceMessage, reason: { code, diagnostics } }`.
+- Quarantine messages and logs use `INVALID_JSON`, `INVALID_TELEMETRY`, `QUARANTINE_PUBLISH_FAILED`, `PERSISTENCE_FAILED`, and `UNEXPECTED_PROCESSING_FAILURE` as safe error codes.
 
 ## Verification
 
@@ -56,4 +57,8 @@ Add a small local helper that writes structured JSON logs with the built-in cons
 
 ## Completion Notes
 
-To be completed after implementation and review.
+- Added `src/handler.js` with sequential per-record processing, partial batch failures, persistence calls, quarantine publication, and structured safe logging.
+- Invalid records are acknowledged only after quarantine publication succeeds. Duplicate and stored records are acknowledged, while persistence, quarantine-publication, and unexpected failures are returned for retry.
+- Added unit tests for every routing outcome, mixed batches, processing order, quarantine contents, identifier correlation, logging failures, and sensitive-data protection.
+- `npm test -- handler` and the complete `npm test` unit suite pass on the pinned Node.js `v20.20.2` runtime (40 tests).
+- Telemetry messages are assumed to remain comfortably below the SQS message-size limit so the raw source message and validation details fit in the quarantine envelope.
