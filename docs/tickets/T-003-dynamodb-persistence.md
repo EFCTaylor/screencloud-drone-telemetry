@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Done
 
 ## Dependencies
 
@@ -41,7 +41,7 @@ Populate the drone history index attributes for every event. Populate `errorInde
 
 ## Implementation Choices Requiring Approval
 
-- A minimal return shape that distinguishes a stored event from a duplicate
+- Persistence returns `{ status: "stored" }` for a new event and `{ status: "duplicate" }` for an existing event.
 
 ## Verification
 
@@ -49,4 +49,7 @@ Populate the drone history index attributes for every event. Populate `errorInde
 
 ## Completion Notes
 
-To be completed after implementation and review.
+- Added `src/persistence.js` with conditional DynamoDB writes, sparse health-error index attributes, and successful duplicate handling.
+- Added unit coverage for stored and duplicate outcomes, warning and critical sparse-index entries, healthy events, and propagation of retryable dependency errors.
+- `npm test -- persistence` and the complete `npm test` unit suite pass on the pinned Node.js `v20.20.2` runtime (28 tests).
+- Manually invoked `persistTelemetryEvent` with a `WARNING` health event and confirmed the command included `errorIndexPk: "ERROR"` and `attribute_not_exists(eventId)`, a successful write returned `{ status: "stored" }`, and a conditional-check failure returned `{ status: "duplicate" }`.
