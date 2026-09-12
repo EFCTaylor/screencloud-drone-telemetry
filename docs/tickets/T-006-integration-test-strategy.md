@@ -1,4 +1,4 @@
-# T-006: Document the LocalStack Integration-Test Strategy
+# T-006: Explain the LocalStack Integration-Test Approach
 
 ## Status
 
@@ -21,23 +21,23 @@ Draft
 
 ## Scope
 
-Document how automated integration tests would use the Serverless-provisioned LocalStack queues and DynamoDB table. The strategy sends messages to the source queue, retrieves them, and invokes the Lambda handler directly with an SQS-shaped event.
+Explain in the README how future integration tests could use the SQS queues and DynamoDB table created in LocalStack by Serverless. The proposed tests would send messages to the main queue, read them back, and call the Lambda handler directly with data shaped like an SQS event.
 
-Do not implement the integration suite. Remove or clearly retire any bootstrap placeholder that suggests automated integration tests are available.
+Do not build these integration tests as part of this challenge. Remove or clearly label any placeholder that makes it look as though automated integration tests already exist.
 
 ## Acceptance Criteria
 
-- The README describes valid persistence, duplicate idempotency, invalid quarantine routing, sparse error-index querying, and mixed-batch partial failure scenarios.
-- The proposed setup uses the same Serverless resources and application handler as the implementation.
-- The README explains test setup, isolation, assertions, and cleanup at a practical level.
-- The README states that these integration tests are proposed, not executed as part of the challenge.
-- The limitations are explicit: direct handler invocation does not verify Lambda polling, automatic invocation, visibility timing, or automatic DLQ redrive.
-- No documented command claims to run an integration suite that does not exist.
+- The README explains how tests would check saving a valid event, handling a duplicate event, sending invalid data to quarantine, searching the health-error index, and processing a batch with mixed outcomes.
+- The proposed tests use the same Serverless resources and Lambda handler as the application.
+- The README explains how each test would prepare data, remain separate from other tests, check its result, and clean up afterward.
+- The README clearly says that these tests are proposed and were not run as part of the challenge.
+- The README clearly states the limits of this approach. Calling the handler directly does not test Lambda automatically reading SQS, automatic invocation, message visibility timing, or automatic movement to the DLQ.
+- Do not document a command that claims to run an integration-test suite when none exists.
 
 ## Out Of Scope
 
 - Automated LocalStack integration tests
-- LocalStack Lambda runtime emulation
+- Running the Lambda runtime inside LocalStack
 - Deployed AWS integration tests
 - Performance or load testing
 
@@ -48,7 +48,7 @@ Do not implement the integration suite. Remove or clearly retire any bootstrap p
 ## Verification
 
 - `npm test`
-- Manual cross-check of the documented strategy against ADR 0009 and the implemented infrastructure
+- Manually compare the documented approach with ADR 0009 and the implemented AWS resources.
 
 ## Completion Notes
 

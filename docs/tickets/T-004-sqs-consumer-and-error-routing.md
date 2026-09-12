@@ -1,4 +1,4 @@
-# T-004: Implement the SQS Consumer and Error Routing
+# T-004: Process SQS Messages and Handle Failures
 
 ## Status
 
@@ -19,36 +19,36 @@ Draft
 
 ## Scope
 
-Implement a thin Lambda handler that processes SQS records sequentially and independently, then returns an SQS partial batch response. Sequential processing is deliberate: it keeps control flow and per-record acknowledgement behaviour obvious for this challenge.
+Create a small Lambda handler that receives a batch of messages from SQS. Process the messages one at a time and handle each message separately, so one failure does not cause successful messages to be retried. Return `batchItemFailures`, listing only the message IDs that SQS should retry.
 
-Persist valid events, acknowledge duplicate events, and publish malformed or schema-invalid events to the quarantine queue. A quarantine message contains `sourceMessageId`, `eventId` when available, the raw source message, and a safe reason containing an error code and validation issues.
+Save valid events and treat duplicate events as successfully handled. Send broken JSON and events that fail validation to the quarantine queue. Each quarantine message contains the original SQS `sourceMessageId`, the `eventId` when it can be read safely, the original source message, and a safe reason with an error code and validation details.
 
-Use a small local helper with built-in console output for structured JSON logs. Do not add a logging dependency.
+Add a small local helper that writes structured JSON logs with the built-in console. Do not install a logging library.
 
 ## Acceptance Criteria
 
-- Valid persisted records are omitted from `batchItemFailures`.
-- Duplicate events are treated as successful no-ops and omitted from `batchItemFailures`.
-- Invalid records are omitted only after quarantine publication succeeds.
-- A failed quarantine publication returns the source `messageId` in `batchItemFailures`.
-- Retryable persistence and unexpected processing failures return only their source `messageId` in `batchItemFailures`.
-- A mixed batch does not retry successful, duplicate, or successfully quarantined sibling records.
-- Structured logs include `awsRequestId`, SQS `messageId`, stage, and outcome, plus parsed event identifiers when available.
+- Do not include successfully saved messages in `batchItemFailures` because they do not need another attempt.
+- Treat duplicate events as successfully handled and do not retry them.
+- Treat an invalid message as handled only after it has been sent successfully to the quarantine queue.
+- If sending to quarantine fails, include the original `messageId` in `batchItemFailures` so SQS retries it.
+- If saving an event fails with a retryable error, or processing fails unexpectedly, include only that message's `messageId` in `batchItemFailures`.
+- In a mixed batch, do not retry messages that were saved, identified as duplicates, or successfully sent to quarantine.
+- Structured logs include the Lambda request ID (`awsRequestId`), `sqsMessageId` copied from the SQS record's `messageId`, processing stage, and outcome. Include parsed event IDs, drone IDs, and event types when available.
 - Logs do not contain raw messages, telemetry data, coordinates, delivery details, or unsafe exception text.
-- Unit tests cover all routing outcomes and mixed batches.
+- Unit tests cover every success and failure route, including batches containing different outcomes.
 
 ## Out Of Scope
 
-- Exactly-once quarantine delivery
-- Additional quarantine deduplication infrastructure
-- Automatic SQS polling, visibility timing, or DLQ redrive tests
+- Guaranteeing that a quarantine message is sent exactly once
+- Extra infrastructure for preventing duplicate quarantine messages
+- Tests of SQS automatically polling messages, timing message visibility, or automatically moving messages to the DLQ
 - Custom metrics, dashboards, alarms, or tracing
 - Manual replay tooling
 
 ## Implementation Choices Requiring Approval
 
-- Exact quarantine message envelope
-- Safe error code names used by quarantine messages and logs
+- Decide the exact fields in a quarantine message.
+- Decide the safe error-code names used in quarantine messages and logs.
 
 ## Verification
 

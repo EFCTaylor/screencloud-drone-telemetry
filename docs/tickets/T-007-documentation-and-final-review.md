@@ -1,4 +1,4 @@
-# T-007: Complete Documentation and Final Review
+# T-007: Finish the Documentation and Final Review
 
 ## Status
 
@@ -19,36 +19,36 @@ Draft
 
 ## Scope
 
-Replace the README template with an accurate explanation of the implemented architecture, event contract, validation, persistence, error routing, infrastructure, testing, security, and local workflow. Record assumptions, challenge-scale limitations, production improvements, and the role of AI assistance.
+Replace the README template with a clear and accurate explanation of how the completed system works. Cover the event format, validation, saving events, handling failures, AWS resources, testing, security, and running the project locally. Also explain the assumptions made for this challenge, what the small challenge solution does not cover, what should improve for production, and how AI assistance was used.
 
-Perform a final review of the implementation against the challenge requirements, accepted ADRs, and ticket acceptance criteria.
+Finally, compare the implementation with the challenge requirements, accepted technical decisions, and every ticket's acceptance criteria.
 
 ## Acceptance Criteria
 
-- Every README command has been executed successfully from the implemented project.
-- Installation, LocalStack startup, resource deployment, example message publication, and unit-testing instructions are complete.
-- The example telemetry events satisfy the implemented schemas and include `eventId`.
-- DynamoDB access patterns and idempotency behaviour are explained accurately.
-- Quarantine, at-least-once delivery, retry, partial batch failure, and DLQ behaviour are clearly distinguished.
-- The JavaScript choice and TypeScript trade-off are explained.
-- Least-privilege permissions and the proposed LocalStack integration-testing strategy and limitations are documented without claiming automated integration coverage.
-- Production considerations describe rather than implement deferred functionality.
-- The AI usage section explains that the user made architectural decisions and approved ticket-scoped agent work.
-- `AGENTS.md` contains the final verified repository structure and commands.
-- No bracketed template placeholders or unsupported claims remain.
+- Run every command shown in the README and confirm that it works with the completed project.
+- Provide complete steps for installing dependencies, starting LocalStack, creating local AWS resources, publishing an example message, and running unit tests.
+- Ensure every example telemetry event passes the implemented validation and includes an `eventId`.
+- Explain how events can be searched in DynamoDB and how duplicate events are prevented from being saved twice.
+- Clearly explain the difference between invalid-data quarantine, messages being delivered more than once, retries, retrying only failed messages in a batch, and the DLQ.
+- Explain why JavaScript was chosen and what is lost by not using TypeScript.
+- Document the restricted AWS permissions and the proposed LocalStack integration-test approach. State its limitations and do not claim that automated integration tests exist.
+- Describe future production improvements without implementing them in this challenge.
+- Explain in the AI usage section that the user made the architecture decisions and approved each ticket's agent-assisted work.
+- Update `AGENTS.md` with the final project structure and commands that have been confirmed to work.
+- Remove every bracketed template placeholder and every statement that is not supported by the completed project or verification evidence.
 
 ## Out Of Scope
 
 - Real AWS deployment
 - CI/CD implementation
-- Production operational runbooks
+- Production operations guides
 - Submission communication
 
 ## Implementation Choices Requiring Approval
 
-- Final production-consideration wording
-- Any incomplete work that must be disclosed
-- Final repository URL and submission details
+- Agree on the final wording for future production improvements.
+- Identify any incomplete work that must be disclosed.
+- Provide the final repository URL and submission details.
 
 ## Verification
 
@@ -56,7 +56,7 @@ Perform a final review of the implementation against the challenge requirements,
 - `npm test`
 - `docker compose up -d`
 - LocalStack deployment command established by T-005
-- Manual cross-check of README claims against code and ADRs
+- Manually compare every README claim with the code and accepted ADRs.
 
 ## Completion Notes
 

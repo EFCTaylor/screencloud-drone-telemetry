@@ -1,4 +1,4 @@
-# T-003: Implement Idempotent DynamoDB Persistence
+# T-003: Save Telemetry Events in DynamoDB
 
 ## Status
 
@@ -17,31 +17,31 @@ Done
 
 ## Scope
 
-Implement one small DynamoDB persistence module using AWS SDK v3. Persist the validated event document with `eventId` as the table primary key and a conditional write that prevents an existing event from being overwritten. Do not add a generic repository interface or persistence framework.
+Create one small module that uses AWS SDK v3 to save validated events in DynamoDB. Use `eventId` as the table's unique ID. Only save an event when that ID does not already exist, so receiving the same event again cannot overwrite it. Do not add a generic database layer or persistence framework.
 
-Populate the drone history index attributes for every event. Populate `errorIndexPk` with `ERROR` only for `HEALTH_STATUS_UPDATE` events whose status is `WARNING` or `CRITICAL`.
+Keep `droneId` and `timestamp` on every saved event so events can be searched by drone and time. Add `errorIndexPk` with the value `ERROR` only to `HEALTH_STATUS_UPDATE` events with a `WARNING` or `CRITICAL` status. This allows those health events to be found through the error index.
 
 ## Acceptance Criteria
 
-- A new event is written using a condition that requires `eventId` not to exist.
-- A conditional-check failure caused by an existing `eventId` is returned as a successful duplicate no-op.
-- Throttling, connectivity, permission, and unexpected DynamoDB errors remain retryable failures.
-- Stored records contain the attributes required by the drone history and sparse error GSIs.
-- A conditional-check failure is handled separately from every other DynamoDB error; other errors are allowed to propagate for retry handling in T-004.
-- Unit tests cover successful writes, duplicate writes, and retryable DynamoDB failures.
+- Save a new event only when its `eventId` does not already exist.
+- If the `eventId` already exists, do not save it again. Return a `duplicate` result and treat it as successfully handled.
+- Let capacity, connection, permission, and unexpected DynamoDB errors pass back to the caller so T-004 can retry them.
+- Every saved event contains the fields needed to search by drone and time. Only warning and critical health events contain the field needed for the error search index.
+- Handle an existing `eventId` differently from every other DynamoDB error.
+- Unit tests cover new events, duplicate events, and DynamoDB errors that need to be retried.
 
 ## Out Of Scope
 
-- Query HTTP endpoints
-- Updates to persisted telemetry
-- A separate idempotency table
-- Detecting conflicting content when a producer reuses an existing `eventId`
+- HTTP endpoints for searching events
+- Changing events after they have been saved
+- A separate table for tracking duplicate events
+- Checking whether a producer reused an `eventId` for different event data
 - TTL, archival, analytics, or retention policies
-- Production partition time-bucketing
+- Splitting production data into time-based groups
 
 ## Implementation Choices Requiring Approval
 
-- Persistence returns `{ status: "stored" }` for a new event and `{ status: "duplicate" }` for an existing event.
+- Return `{ status: "stored" }` for a new event and `{ status: "duplicate" }` when the event already exists.
 
 ## Verification
 
@@ -49,7 +49,7 @@ Populate the drone history index attributes for every event. Populate `errorInde
 
 ## Completion Notes
 
-- Added `src/persistence.js` with conditional DynamoDB writes, sparse health-error index attributes, and successful duplicate handling.
-- Added unit coverage for stored and duplicate outcomes, warning and critical sparse-index entries, healthy events, and propagation of retryable dependency errors.
+- Added `src/persistence.js` to save new events, add the health-error search field when needed, and treat duplicates as successful outcomes.
+- Added unit tests for new and duplicate events, warning and critical health events, healthy events, and DynamoDB errors that must be retried.
 - `npm test -- persistence` and the complete `npm test` unit suite pass on the pinned Node.js `v20.20.2` runtime (28 tests).
-- Manually invoked `persistTelemetryEvent` with a `WARNING` health event and confirmed the command included `errorIndexPk: "ERROR"` and `attribute_not_exists(eventId)`, a successful write returned `{ status: "stored" }`, and a conditional-check failure returned `{ status: "duplicate" }`.
+- Manually called `persistTelemetryEvent` with a `WARNING` health event. Confirmed that the DynamoDB command included `errorIndexPk: "ERROR"` and `attribute_not_exists(eventId)`, a successful write returned `{ status: "stored" }`, and an existing event returned `{ status: "duplicate" }`.

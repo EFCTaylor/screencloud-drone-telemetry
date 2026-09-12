@@ -1,4 +1,4 @@
-# T-005: Define Serverless and LocalStack Infrastructure
+# T-005: Set Up AWS Resources and LocalStack
 
 ## Status
 
@@ -22,35 +22,44 @@ Draft
 
 ## Scope
 
-Define only the required Lambda, main telemetry queue, quarantine queue, DLQ, event-source mapping, DynamoDB table, both GSIs, redrive policy, and least-privilege Lambda permissions in one Serverless Framework configuration.
+Create one Serverless Framework configuration containing only the resources this pipeline needs:
 
-Add Docker Compose configuration that starts LocalStack. Configure the LocalStack Serverless plugin so the same resource definition can be deployed locally.
+- The Lambda function that processes telemetry
+- The main SQS queue that receives telemetry
+- The quarantine queue for invalid messages
+- The dead-letter queue (DLQ) for messages that still fail after retries
+- The connection that triggers Lambda when SQS has messages
+- The DynamoDB table and its two search indexes
+- The rule that moves repeatedly failing messages to the DLQ
+- The minimum AWS permissions needed by Lambda
+
+Add Docker Compose configuration to start LocalStack. Configure the Serverless LocalStack plugin so the same AWS resource definitions can also be created locally.
 
 ## Acceptance Criteria
 
-- The event-source mapping enables `ReportBatchItemFailures`.
-- The source queue moves a message to the DLQ after five total receives.
-- The visibility timeout is at least six times the Lambda timeout plus the batching window.
-- DynamoDB uses `eventId` as its primary key and defines the drone history and sparse error GSIs from ADR 0007.
-- Lambda permissions are limited to source-queue consumption, quarantine publication, required DynamoDB writes, and scoped logging.
-- A producer send-only IAM policy is defined or documented without granting read or database permissions.
+- The SQS-to-Lambda connection enables `ReportBatchItemFailures`, allowing only failed messages in a batch to be retried.
+- The main queue moves a message to the DLQ after it has been received five times without being completed.
+- The queue keeps a message hidden long enough for processing: its visibility timeout is at least six times the Lambda timeout, plus the maximum batching window.
+- DynamoDB uses `eventId` as its unique ID and includes the two search indexes described in ADR 0007: drone history and health errors.
+- Lambda can consume from the main queue, send to quarantine, write to the telemetry table, and write its own logs. It receives no broader permissions.
+- Define or document a producer permission that can only send to the main queue. It cannot read messages or access DynamoDB.
 - Docker Compose starts a healthy LocalStack container.
-- Serverless can validate and package the AWS configuration, and its LocalStack stage points the same resource definition at LocalStack.
+- Serverless can check and package the AWS configuration. Its local stage uses the same resource definitions with LocalStack.
 
 ## Out Of Scope
 
 - Deployment to a real AWS account
 - CI/CD
-- Custom networking or multi-account design
+- Custom network setup or designs involving multiple AWS accounts
 - Dashboards, alarms, and production runbooks
 - Production load or capacity testing
 
 ## Implementation Choices Requiring Approval
 
-- Lambda timeout, batch size, and batching window
-- DynamoDB billing mode
-- Queue retention settings
-- Exact resource names and deployment stage naming
+- Choose the Lambda timeout, number of messages in each batch, and maximum wait for a batch.
+- Choose how DynamoDB capacity is billed.
+- Choose how long each queue keeps its messages.
+- Choose the AWS resource names and deployment-stage names.
 
 ## Verification
 
@@ -58,7 +67,7 @@ Add Docker Compose configuration that starts LocalStack. Configure the LocalStac
 - `npx serverless package`
 - `docker compose config`
 - `docker compose up -d`
-- Document the LocalStack deployment command for the strategy in T-006; automated service verification is deferred.
+- Document the LocalStack deployment command for T-006. Automated service-level tests are not part of this ticket.
 
 ## Completion Notes
 

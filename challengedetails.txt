@@ -25,9 +25,10 @@ automatically ingest this raw data as it arrives, make sense of it, validate it,
 for later analysis, monitoring dashboards, and potential alerting.
 
 The Challenge
-The use of AIto complete this challenge is accepted and encouraged. We are transitioning to
-an AI first company and believe strongly that all developers must become proficientin using
+The use of AI to complete this challenge is accepted and encouraged. We are transitioning to
+an AI first company and believe strongly that all developers must become proficient in using
 these tools.
+
 Please ensure that you can explain your usage and justify any decisions made.
 Design and implement a backend service (or set of services) that:
 
