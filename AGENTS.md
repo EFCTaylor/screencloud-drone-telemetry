@@ -19,6 +19,7 @@
 - Keep unit tests with the ticket that introduces the behaviour. Report changed files, verification results, assumptions, and unresolved risks after implementation.
 - Do not mark a ticket `Done`; only the user accepts completed work.
 - Load `.opencode/skills/telemetry-ticketing/SKILL.md` for ticket creation, implementation, or review rules.
+- Load `.opencode/skills/staff-pr-review/SKILL.md` for pull request, branch, commit-range, or pre-submission reviews.
 
 ## Architecture Gotchas
 

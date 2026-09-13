@@ -278,4 +278,4 @@ For production, I would use a supported Node.js runtime and current deployment t
 
 ## AI Usage
 
-AI tools helped explore options, review decisions, check tests and edge cases, and improve documentation. I made the architecture decisions, reviewed the generated work, and approved each ticket before it was accepted.
+AI tools helped explore options, review decisions, check tests and edge cases, and improve documentation. I made the architecture decisions, reviewed the generated work, and approved each ticket before it was accepted. The repository includes a reusable [staff PR review skill](.opencode/skills/staff-pr-review/SKILL.md) that defines a plain-language review process for correctness, clean code, architecture, scaling, performance, and event-driven systems.

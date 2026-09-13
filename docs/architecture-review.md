@@ -41,6 +41,8 @@ These are not assumed to be unnecessary in every environment. They are deferred 
 
 After accepting the ADRs, I translated them into the ordered tickets in [`docs/tickets`](tickets/README.md). Agents receive ticket-scoped work, must surface material implementation choices for my approval, and cannot mark a ticket complete. The committed [telemetry ticketing skill](../.opencode/skills/telemetry-ticketing/SKILL.md) records these prompting and implementation constraints.
 
+The committed [staff PR review skill](../.opencode/skills/staff-pr-review/SKILL.md) defines a separate, reusable review process. It asks a senior staff reviewer to prioritise concrete findings, consider clean code and long-term architectural effects, apply event-driven expertise when relevant, and explain recommendations in plain language. Reviews stay in the conversation unless a user explicitly asks to save a Markdown report.
+
 This keeps architectural ownership with me while using AI for challenge, implementation assistance, verification, and independent review.
 
 ## Addendum: Post-Design Scope Review
