@@ -7,7 +7,9 @@ const identifierSchema = z.string().min(1).regex(/\S/);
 const sharedEventFields = {
   eventId: z.uuid(),
   droneId: identifierSchema,
-  timestamp: z.iso.datetime({ offset: true }),
+  timestamp: z
+    .iso.datetime({ offset: true })
+    .transform((timestamp) => new Date(timestamp).toISOString()),
 };
 
 const telemetryEventSchema = z.discriminatedUnion("eventType", [

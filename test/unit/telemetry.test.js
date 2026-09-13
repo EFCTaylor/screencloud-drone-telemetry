@@ -5,7 +5,7 @@ const { parseTelemetryEvent } = require('../../src/telemetry');
 const envelope = {
   eventId: '123e4567-e89b-42d3-a456-426614174000',
   droneId: 'drone-123',
-  timestamp: '2026-09-07T12:30:00Z',
+  timestamp: '2026-09-07T12:30:00.000Z',
 };
 
 const validEvents = [
@@ -111,6 +111,42 @@ describe('parseTelemetryEvent', () => {
 
     expect(result).toEqual({ success: true, event: validEvents[1] });
     expect(input).toEqual(original);
+  });
+
+  it.each([
+    ['2026-09-13T12:00:00+10:00', '2026-09-13T02:00:00.000Z'],
+    ['2026-01-01T00:30:00+01:00', '2025-12-31T23:30:00.000Z'],
+    ['2026-09-13T02:00:00.1Z', '2026-09-13T02:00:00.100Z'],
+  ])('normalizes %s to canonical UTC', (timestamp, expectedTimestamp) => {
+    const input = { ...validEvents[1], timestamp };
+    const original = structuredClone(input);
+
+    const result = parseTelemetryEvent(JSON.stringify(input));
+
+    expect(result).toEqual({
+      success: true,
+      event: { ...validEvents[1], timestamp: expectedTimestamp },
+    });
+    expect(input).toEqual(original);
+  });
+
+  it('makes timestamp string order match chronological order', () => {
+    const earlier = parseTelemetryEvent(
+      JSON.stringify({
+        ...validEvents[1],
+        timestamp: '2026-09-13T12:00:00+10:00',
+      }),
+    );
+    const later = parseTelemetryEvent(
+      JSON.stringify({
+        ...validEvents[1],
+        timestamp: '2026-09-13T03:00:00Z',
+      }),
+    );
+
+    expect(earlier.success).toBe(true);
+    expect(later.success).toBe(true);
+    expect(earlier.event.timestamp < later.event.timestamp).toBe(true);
   });
 
   it('returns diagnostics without rejected telemetry values', () => {

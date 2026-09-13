@@ -11,11 +11,11 @@
 
 ## Findings
 
-### High: Valid timestamps do not always sort chronologically in DynamoDB
+### High (Resolved): Valid timestamps did not always sort chronologically in DynamoDB
 
-**References:** `src/telemetry.js:10`, `src/persistence.js:10-13`, `serverless.yml:125-138`, `README.md:42`, `README.md:76-77`
+**Original references:** `src/telemetry.js:10`, `src/persistence.js:10-13`, `serverless.yml:125-138`, `README.md:42`, `README.md:76-77`
 
-The event contract accepts ISO 8601 timestamps with any numeric timezone offset and preserves the supplied string. Both DynamoDB indexes then use that string as their sort key. DynamoDB sorts strings lexicographically rather than by the instant they represent.
+At the time of review, the event contract accepted ISO 8601 timestamps with any numeric timezone offset and preserved the supplied string. Both DynamoDB indexes then used that string as their sort key. DynamoDB sorts strings lexicographically rather than by the instant they represent.
 
 For example, `2026-09-13T12:00:00+10:00` occurs before `2026-09-13T03:00:00Z`, but the first string sorts after the second. Variable fractional-second precision can produce similar ordering problems.
 
@@ -23,17 +23,19 @@ As a result, `drone-history` can return events in the wrong chronological order,
 
 **Recommendation:** Require timestamps in canonical UTC format or normalize them to a fixed UTC representation such as `Date#toISOString()` before indexing. Preserve the producer's original timestamp separately only if it is needed. Add tests covering positive and negative offsets, date boundaries, and fractional-second precision.
 
-**Disposition:** Fix before submission. The choice requires user approval because normalization affects T-002's storage-ready validation output and ADR 0007's definition of the `timestamp` index key.
+**Resolution:** T-008 implements the user-approved normalization approach. ADR 0013 records the decision. Validation now converts accepted timestamps to canonical UTC with fixed millisecond precision before returning the storage-ready event. Unit tests cover offsets, a UTC date boundary, fractional-second precision, chronological string ordering, and unchanged input.
 
-### Medium: Validated index keys can exceed DynamoDB limits
+**Disposition:** Resolved and accepted by the user on 2026-09-13.
 
-**References:** `src/telemetry.js:5`, `src/telemetry.js:9-10`, `src/handler.js:128-150`, `serverless.yml:115-138`
+### Medium: A validated drone ID can exceed DynamoDB limits
 
-`droneId` has no maximum size even though it becomes a DynamoDB index partition key. DynamoDB limits a partition key to 2,048 bytes. The timestamp validator also permits an arbitrary number of fractional-second digits, while an index sort key is limited to 1,024 bytes.
+**References:** `src/telemetry.js:5`, `src/telemetry.js:9`, `src/handler.js:128-150`, `serverless.yml:115-130`
 
-Messages exceeding either limit pass application validation and then fail every DynamoDB write with a permanent validation error. The handler treats every persistence error as retryable, so these messages consume all retry attempts and reach the DLQ instead of being classified as invalid telemetry and sent to quarantine.
+`droneId` has no maximum size even though it becomes a DynamoDB index partition key. DynamoDB limits a partition key to 2,048 bytes.
 
-**Recommendation:** Add explicit UTF-8 byte limits for every DynamoDB key field during telemetry validation. Add boundary tests showing that oversized key values are quarantined instead of retried.
+Messages exceeding that limit pass application validation and then fail every DynamoDB write with a permanent validation error. The handler treats every persistence error as retryable, so these messages consume all retry attempts and reach the DLQ instead of being classified as invalid telemetry and sent to quarantine.
+
+**Recommendation:** Add an explicit UTF-8 byte limit for `droneId` during telemetry validation. Add boundary tests showing that oversized values are quarantined instead of retried.
 
 **Disposition:** Fix before submission so permanent data-quality failures follow the documented quarantine policy.
 
@@ -119,16 +121,16 @@ The following are production considerations rather than current challenge defect
 | Run every README command | Partial | The main workflow is recorded, but the complete clean-checkout sequence is not evidenced. |
 | Complete local installation, run, and test steps | Met | Installation, LocalStack, deployment, publishing, testing, and shutdown are documented. |
 | Valid examples include `eventId` | Met | The example matches the implemented schema. |
-| Explain DynamoDB searches and duplicates | Partial | Duplicate handling is accurate; chronological and time-window claims fail for mixed timezone offsets. |
+| Explain DynamoDB searches and duplicates | Met | Duplicate handling is accurate and canonical UTC timestamps support chronological and time-window queries. |
 | Explain quarantine, duplicate delivery, retries, partial batches, and DLQ | Met | The outcomes and delivery guarantees are clearly distinguished. |
 | Explain JavaScript choice and TypeScript trade-off | Met | The rationale and loss of compile-time checking are documented. |
 | Document permissions and proposed integration tests | Met | Least-privilege intent and the absence and limitations of automated integration tests are clear. |
 | Describe future production improvements | Met | The README identifies appropriate production work without implementing it. |
 | Explain AI ownership and ticket approval | Met | The user is identified as the decision owner. |
 | Update `AGENTS.md` | Met | The final structure, commands, and architectural gotchas are present. |
-| Remove placeholders and unsupported claims | Not met | No template placeholders remain, but timestamp ordering and indefinite buffering claims are unsupported. |
+| Remove placeholders and unsupported claims | Not met | No template placeholders remain, but the indefinite buffering claim is unsupported. |
 
-T-007 should remain in `Review` until the high-severity timestamp issue and the acceptance-evidence gaps are resolved. Only the user should mark it `Done`.
+The high-severity timestamp issue is resolved. T-007 should remain in `Review` until its remaining acceptance-evidence gaps are resolved. Only the user should mark it `Done`.
 
 ## Verification
 
@@ -143,7 +145,8 @@ Read-only review checks established:
 - An independent review run executed `docker compose config --quiet`, Serverless configuration printing for `dev` and `local`, dependency-tree validation, and dependency audits successfully apart from the reported audit findings
 - The independent test run used Node.js `v24.20.0`: 40 tests passed and the bootstrap version test failed as expected because the repository requires Node.js 20
 - T-007 records that all 41 unit tests pass on the pinned Node.js `v20.20.2`, along with successful LocalStack deployment and example-message processing; those historical results were not independently repeated during this review
+- T-008 verification ran `npm test -- telemetry` and `npm test` on Node.js `v20.20.2`; all 5 suites and 45 tests passed
 
 ## Overall Assessment
 
-The repository demonstrates a clear, well-reasoned event-driven design and covers the challenge's main reliability behaviors without unnecessary abstraction. It is not ready for final acceptance because timestamp handling can violate both required DynamoDB query patterns. Correcting timestamp canonicalization, bounding DynamoDB key fields, and tightening the final documentation evidence would leave a strong submission with its remaining production limitations clearly disclosed.
+The repository demonstrates a clear, well-reasoned event-driven design and covers the challenge's main reliability behaviors without unnecessary abstraction. T-008 resolves the high-severity timestamp-ordering defect. The remaining medium and low findings, including the unbounded `droneId` key and final documentation evidence, remain unchanged unless explicitly approved for separate work.

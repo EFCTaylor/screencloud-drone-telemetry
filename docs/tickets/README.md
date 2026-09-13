@@ -23,6 +23,7 @@ The user approves each ticket before work starts and decides when it is done. If
 | [T-005](T-005-serverless-and-localstack.md) | Set up AWS resources and LocalStack | T-001, T-003, T-004 | Done |
 | [T-006](T-006-integration-test-strategy.md) | Explain the LocalStack integration-test approach | T-003, T-004, T-005 | Done |
 | [T-007](T-007-documentation-and-final-review.md) | Finish the documentation and final review | T-001 through T-006 | Review |
+| [T-008](T-008-normalize-timestamps.md) | Normalize timestamps for DynamoDB searches | T-002, T-003 | Done |
 
 ## Common Terms
 

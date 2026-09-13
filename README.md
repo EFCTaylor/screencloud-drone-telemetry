@@ -39,7 +39,7 @@ Each SQS message contains one JSON event. Every event must include:
 
 - `eventId`: a producer-generated UUID
 - `droneId`: a non-empty string
-- `timestamp`: an ISO 8601 date and time with a timezone
+- `timestamp`: an ISO 8601 date and time with a timezone; it is normalized to UTC with fixed millisecond precision
 - `eventType`: one of the supported event types below
 - `telemetryData`: fields required by that event type
 
@@ -51,7 +51,7 @@ Each SQS message contains one JSON event. Every event must include:
 | `DELIVERY_COMPLETED` | A non-empty `deliveryId` |
 | `HEALTH_STATUS_UPDATE` | `healthStatus` set to `HEALTHY`, `WARNING`, or `CRITICAL` |
 
-Zod parses and validates each event. Unknown fields are removed, and the validated object is saved directly. A general `statusCode` was left out because each event type already has fields that describe its result more clearly.
+Zod parses and validates each event. Unknown fields are removed, and timestamps are normalized with `Date#toISOString()` before the validated object is saved directly. For example, `2026-09-13T12:00:00+10:00` is stored as `2026-09-13T02:00:00.000Z`. A general `statusCode` was left out because each event type already has fields that describe its result more clearly.
 
 ### Example Event
 
@@ -73,8 +73,8 @@ DynamoDB fits this event data because the required searches are known and do not
 
 The table has two indexes:
 
-- `drone-history` uses `droneId` and `timestamp`. It finds one drone's events in time order or within a time range.
-- `health-errors` uses `errorIndexPk=ERROR` and `timestamp`. Only `WARNING` and `CRITICAL` health events are added to this index.
+- `drone-history` uses `droneId` and the normalized `timestamp`. It finds one drone's events in time order or within a time range.
+- `health-errors` uses `errorIndexPk=ERROR` and the normalized `timestamp`. Only `WARNING` and `CRITICAL` health events are added to this index.
 
 The table does not have an index for searching every event by type or searching every drone at once. Those searches would need another index or a separate reporting store.
 
