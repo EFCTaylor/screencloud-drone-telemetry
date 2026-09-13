@@ -2,227 +2,280 @@
 
 ## Overview
 
-This project implements an event-driven backend pipeline for processing telemetry data received from a fleet of autonomous delivery drones.
+This project processes telemetry from delivery drones. A producer sends one JSON event to an SQS queue. Lambda validates the event and saves valid data in DynamoDB.
 
-The system is responsible for:
+The system also:
 
-- Ingesting incoming drone telemetry events
-- Parsing and validating incoming data
-- Transforming valid events into a consistent internal format
-- Persisting processed telemetry for later querying and analysis
-- Handling malformed or incomplete events safely
-- Providing clear logging and error handling
+- Stops duplicate events from being saved twice
+- Sends invalid data to a quarantine queue
+- Retries temporary processing failures
+- Moves messages to a dead-letter queue (DLQ) after repeated failures
+- Logs useful identifiers without logging private telemetry
 
-The solution has been designed with simplicity, reliability and future scalability in mind.
-
-## Architecture
-
-The pipeline follows the general flow:
+## How It Works
 
 ```text
-Telemetry Event
-      |
-      v
-   Ingestion
-      |
-      v
-  Validation
-      |
-      v
-Transformation
-      |
-      v
- Persistence
+Producer
+   |
+   v
+Source SQS queue
+   |
+   v
+Lambda processor
+   |---------------- invalid data ----------------> Quarantine queue
+   |---------------- retryable failure -----------> SQS retry, then DLQ
+   |
+   v
+DynamoDB table
 ```
 
-### Ingestion
+SQS keeps incoming events until they can be processed, even when the processor is temporarily unavailable. Lambda runs only when there is work and can scale with the queue. It receives up to 10 messages at a time. When the handler returns normally, only messages marked as failed are retried. SQS can still deliver any message more than once.
 
-[Describe the ingestion mechanism chosen here.]
+This design is small, but it still handles the main risks of an event-driven system: invalid input, duplicate delivery, temporary failures, and partial batch failures.
 
-I chose this approach because:
+## Event Format
 
-[Explain why this mechanism is appropriate for telemetry data and an event-driven system.]
+Each SQS message contains one JSON event. Every event must include:
 
-### Processing
+- `eventId`: a producer-generated UUID
+- `droneId`: a non-empty string
+- `timestamp`: an ISO 8601 date and time with a timezone
+- `eventType`: one of the supported event types below
+- `telemetryData`: fields required by that event type
 
-Incoming telemetry records are passed through a processing layer responsible for:
+| Event type | Required telemetry data |
+| --- | --- |
+| `LOCATION_UPDATE` | `latitude` from -90 to 90 and `longitude` from -180 to 180 |
+| `BATTERY_UPDATE` | `batteryLevel` from 0 to 100 |
+| `DELIVERY_STARTED` | A non-empty `deliveryId` |
+| `DELIVERY_COMPLETED` | A non-empty `deliveryId` |
+| `HEALTH_STATUS_UPDATE` | `healthStatus` set to `HEALTHY`, `WARNING`, or `CRITICAL` |
 
-1. Parsing the incoming event
-2. Validating required fields and field formats
-3. Rejecting or handling malformed records
-4. Transforming valid events into the internal telemetry model
-5. Passing valid records to the persistence layer
+Zod parses and validates each event. Unknown fields are removed, and the validated object is saved directly. A general `statusCode` was left out because each event type already has fields that describe its result more clearly.
 
-Keeping this logic separate from the ingestion mechanism makes the core processing logic easier to test and reduces coupling between infrastructure and business logic.
+### Example Event
 
-### Validation
-
-Telemetry data cannot be assumed to be complete or valid.
-
-The application therefore validates incoming records before attempting to persist them.
-
-Examples include:
-
-- Required fields
-- Valid timestamps
-- Recognised event types
-- Valid status codes
-- Appropriate telemetry values
-
-Invalid events are logged and handled without preventing subsequent events from being processed.
-
-## Data Storage
-
-[Database/storage technology]
-
-The processed telemetry model contains fields such as:
-
-```text
-droneId
-timestamp
-eventType
-statusCode
-telemetryData
+```json
+{
+  "eventId": "3d6f0a68-7f40-4fd2-8b42-74bcfa6a4574",
+  "droneId": "drone-123",
+  "timestamp": "2026-09-13T12:30:00Z",
+  "eventType": "BATTERY_UPDATE",
+  "telemetryData": {
+    "batteryLevel": 72
+  }
+}
 ```
 
-I chose [database] because [reason].
+## Storage And Searches
 
-The schema is designed with potential access patterns in mind, including:
+DynamoDB fits this event data because the required searches are known and do not need joins. It stores each event using `eventId` as its primary key. Writes use a condition that only succeeds when the `eventId` does not already exist. If SQS delivers the same event more than once, the first write is kept and later writes are treated as successful duplicates.
 
-- Retrieving events for a particular drone
-- Retrieving events within a time period
-- Identifying particular event or error types
+The table has two indexes:
+
+- `drone-history` uses `droneId` and `timestamp`. It finds one drone's events in time order or within a time range.
+- `health-errors` uses `errorIndexPk=ERROR` and `timestamp`. Only `WARNING` and `CRITICAL` health events are added to this index.
+
+The table does not have an index for searching every event by type or searching every drone at once. Those searches would need another index or a separate reporting store.
+
+## Failures And Retries
+
+SQS and Lambda can deliver a message more than once. The DynamoDB condition on `eventId` makes these repeated deliveries safe.
+
+Invalid JSON and events that fail validation are sent to the quarantine queue. A quarantine message contains the original SQS `messageId`, the `eventId` when it is valid, the original message, and safe validation details. The source message is only treated as complete after the quarantine write succeeds. If that write fails, the source message is retried.
+
+Quarantine messages can also be delivered more than once. The source `messageId` and `eventId` can be used to find copies. The quarantine queue contains the original telemetry, so access to it should be restricted.
+
+Temporary failures, such as a DynamoDB or quarantine queue error, are returned in Lambda's `batchItemFailures` response. Only those messages are retried. Valid events, duplicates, and events successfully sent to quarantine are not returned for retry.
+
+The source queue allows five receive attempts. A message that still cannot be processed is moved to the DLQ. The quarantine queue is for bad data. The DLQ is for work that repeatedly failed to run.
+
+## Logging
+
+The processor writes JSON logs with fields such as the Lambda request ID, SQS message ID, event ID, drone ID, processing stage, outcome, and a safe error code.
+
+Logs do not include raw telemetry, coordinates, delivery details, or exception messages. Logging failures are ignored so they cannot change whether an SQS message is retried.
 
 ## Technology Choices
 
-### Language
+### JavaScript And Node.js
 
-JavaScript on Node.js 20.
+The application uses JavaScript on Node.js `v20.20.2`. Although the brief prefers TypeScript, JavaScript is the language I currently work with. This kept the time-boxed work focused on the pipeline itself.
 
-Although the brief prefers TypeScript, I chose JavaScript because it is the language I currently work with. This keeps the time-boxed implementation focused on pipeline reliability, architecture, and testing. Zod provides runtime schema validation where JavaScript does not provide static type enforcement.
+Zod provides runtime validation, but JavaScript does not provide TypeScript's compile-time checks. TypeScript would make it easier to catch incorrect field names and incompatible values before the code runs.
 
-### Infrastructure
+### AWS And LocalStack
 
-The planned infrastructure uses Serverless Framework v3, Docker Compose, and LocalStack. Serverless will define the Lambda, queues, and DynamoDB resources once, while Docker Compose will start LocalStack for local development.
+`serverless.yml` defines the same resources for AWS and LocalStack:
 
-Serverless Framework v3 is retained so reviewers can use the project without a Serverless account or license key. It supports Lambda runtimes only through Node.js 20, so this repository pins Node.js `v20.20.2`. Node.js 20 is end-of-life and the Serverless v3/LocalStack plugin development dependency tree has known audit findings; this is an accepted challenge-only trade-off, not a production recommendation. In production I would use a supported Node.js runtime and current deployment tooling.
+- One Lambda processor with a 30-second timeout
+- A source queue with four-day retention and a 180-second visibility timeout
+- A quarantine queue and DLQ with 14-day retention
+- A batch size of 10 with no wait to build a larger batch
+- DLQ redrive after five receives
+- A DynamoDB table with on-demand billing and two indexes
 
-The infrastructure and Docker configuration will be implemented in T-005. They are not runnable yet.
+Resource names include the deployment stage. The local resources start with `drone-telemetry-local-`.
 
-### Testing
+Using one Serverless file avoids separate local and AWS definitions getting out of step. Docker Compose only starts LocalStack; Serverless creates the resources inside it.
 
-[Testing framework]
+Serverless Framework v3 is used so reviewers do not need a Serverless account or licence key. It supports Node.js 20 for Lambda, so this repository pins Node.js `v20.20.2`. Node.js 20 is end-of-life, and this challenge-only toolchain has known dependency audit findings. A production project should use a supported runtime and current deployment tools.
 
-Unit tests cover the core processing behaviour, particularly:
+## Security
 
-- Valid telemetry records
-- Missing required fields
-- Invalid field formats
-- Transformation of valid events
-- Error-handling behaviour
+The Lambda role can only:
 
-External infrastructure dependencies are mocked where appropriate so that the core processing logic can be tested independently.
+- Read and delete messages from the source queue, and inspect its attributes
+- Send messages to the quarantine queue
+- Write to the telemetry table
+- Write to its own CloudWatch log group
+
+A separate producer policy can only send messages to the source queue. It cannot read queues or use DynamoDB. The policy is defined by Serverless but would need to be attached to the correct producer identity in a real deployment.
 
 ## Running Locally
 
 ### Prerequisites
 
 - Node.js `v20.20.2`
-- npm
-- Docker
-- Docker Compose
+- npm `10.8.2`
+- Docker with Docker Compose
+- nvm, or another way to select the required Node.js version
 
-### Installation
-
-Clone the repository:
+### Install The Project
 
 ```bash
-git clone <repository-url>
-cd <repository-name>
-```
-
-Install dependencies:
-
-```bash
+git clone https://github.com/EFCTaylor/screencloud-drone-telemetry.git
+cd screencloud-drone-telemetry
+nvm use
 npm ci
 ```
 
-### Start Local Dependencies
+Load the local AWS settings into the current shell:
 
 ```bash
-docker compose up -d
+set -a
+. ./.env.example
+set +a
 ```
 
-### Run the Application
+### Start The Application
+
+Start LocalStack and wait until it is healthy:
 
 ```bash
-npm run dev
+docker compose up -d --wait
 ```
 
-### Run Tests
+Create the queues, Lambda, DynamoDB table, indexes, and permissions:
+
+```bash
+npx serverless deploy --stage local
+```
+
+The deployment enables the SQS trigger, so there is no separate development server to start.
+
+### Publish An Example Event
+
+Run this from the repository root after loading the local AWS settings:
+
+```bash
+node <<'NODE'
+const { randomUUID } = require("node:crypto");
+const {
+  GetQueueUrlCommand,
+  SendMessageCommand,
+  SQSClient,
+} = require("@aws-sdk/client-sqs");
+
+const client = new SQSClient({
+  region: process.env.AWS_REGION,
+  endpoint: process.env.AWS_ENDPOINT_URL,
+});
+
+async function publish() {
+  const { QueueUrl } = await client.send(
+    new GetQueueUrlCommand({ QueueName: "drone-telemetry-local-source" }),
+  );
+  const event = {
+    eventId: randomUUID(),
+    droneId: "drone-123",
+    timestamp: new Date().toISOString(),
+    eventType: "BATTERY_UPDATE",
+    telemetryData: { batteryLevel: 72 },
+  };
+  const { MessageId } = await client.send(
+    new SendMessageCommand({
+      QueueUrl,
+      MessageBody: JSON.stringify(event),
+    }),
+  );
+
+  console.log(JSON.stringify({ MessageId, event }, null, 2));
+}
+
+publish().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+NODE
+```
+
+Lambda will read the message and save the event in DynamoDB.
+
+### Run Unit Tests
 
 ```bash
 npm test
 ```
 
-## Example Telemetry Event
+### Stop The Application
 
-```json
-{
-  "droneId": "drone-123",
-  "timestamp": "2026-09-07T12:30:00Z",
-  "eventType": "DELIVERY_COMPLETED",
-  "statusCode": 200,
-  "telemetryData": {
-    "batteryLevel": 72,
-    "location": {
-      "latitude": 54.5973,
-      "longitude": -5.9301
-    }
-  }
-}
+Stop LocalStack and remove its local resources:
+
+```bash
+docker compose down
 ```
 
-## Error Handling
+## Testing
 
-The pipeline assumes that telemetry data may occasionally be incomplete, malformed or corrupted.
+Jest unit tests check validation, transformation, DynamoDB writes, duplicate handling, quarantine messages, retries, mixed batches, and safe logging. AWS client calls are mocked so unit tests do not need LocalStack.
 
-Invalid records are therefore handled independently rather than causing the entire processing pipeline to fail.
+### Proposed LocalStack Integration Tests
 
-[Describe final error-handling/retry/dead-letter strategy here.]
+Automated integration tests were not added or run as part of this challenge. If they were added, they would use the same queues and table defined in `serverless.yml`. There would be no separate test infrastructure.
 
-## Assumptions
+The test setup would:
 
-For the purposes of this challenge I have made the following assumptions:
+1. Start LocalStack and deploy the `local` stage.
+2. Pause the automatic SQS trigger so Lambda cannot take messages before the tests receive them.
+3. Set the local environment variables before loading `src/handler.js`.
+4. Send messages to the source queue, read them back, shape them like a Lambda SQS event, and call the handler directly.
 
-- Telemetry events can arrive independently and potentially at high volume.
-- Invalid telemetry should not prevent valid events from being processed.
-- Events should be stored in a format that allows efficient retrieval by drone and time.
-- The local implementation represents an architecture that could later be deployed into a cloud environment.
+The proposed tests would check:
 
-## Production Considerations
+- Saving and finding a valid event through `drone-history`
+- Receiving the same event twice without saving it twice
+- Sending invalid data to quarantine
+- Finding warning and critical events through `health-errors`
+- Processing valid, duplicate, invalid, and retryable records in one batch
 
-Given additional time, I would consider:
+The tests would run one at a time. Each test would use its own IDs and timestamps, clear its data before and after it runs, and retry checks briefly when LocalStack needs time to return a result.
 
-- Authentication and authorisation
-- Retry and dead-letter handling
-- Idempotency and duplicate event handling
-- Monitoring, metrics and alerting
-- Structured production logging
-- Infrastructure deployment through CI/CD
-- Load and performance testing
-- Data retention and archival policies
+Calling the handler directly has limits. It does not test Lambda reading from SQS automatically, automatic Lambda invocation, message visibility timing, source-message acknowledgement, or automatic movement to the DLQ. Those behaviours need tests against a deployed AWS setup.
+
+## Assumptions And Limits
+
+- Each SQS message contains one JSON event rather than a file or a list of events.
+- The producer creates a stable UUID for `eventId` and does not reuse it for different events.
+- Messages remain comfortably below the SQS message-size limit.
+- A general `statusCode` is not needed because validation is specific to each event type.
+- LocalStack was used to check the infrastructure. The project was not deployed to a real AWS account.
+- Automated LocalStack integration tests were planned but not built because the challenge prioritised core logic and a clear test approach.
+
+## Production Improvements
+
+For production, I would use a supported Node.js runtime and current deployment tools. I would also add CI/CD, monitoring and alarms, real AWS integration and load tests, schema versioning, data retention and replay tools, and a plan for scaling the shared health-error index. Producer identities would be created and linked to the restricted producer policy.
 
 ## AI Usage
 
-AI-assisted development tools were used during this challenge.
-
-I used AI to support tasks such as:
-
-- Exploring implementation approaches
-- Reviewing architecture decisions
-- Generating or refining boilerplate
-- Reviewing tests and edge cases
-- Improving documentation
-
-All architectural and implementation decisions were reviewed and understood before being included in the solution.
+AI tools helped explore options, review decisions, check tests and edge cases, and improve documentation. I made the architecture decisions, reviewed the generated work, and approved each ticket before it was accepted.

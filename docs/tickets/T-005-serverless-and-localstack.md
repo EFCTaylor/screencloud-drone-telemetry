@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Done
 
 ## Dependencies
 
@@ -56,10 +56,11 @@ Add Docker Compose configuration to start LocalStack. Configure the Serverless L
 
 ## Implementation Choices Requiring Approval
 
-- Choose the Lambda timeout, number of messages in each batch, and maximum wait for a batch.
-- Choose how DynamoDB capacity is billed.
-- Choose how long each queue keeps its messages.
-- Choose the AWS resource names and deployment-stage names.
+- Lambda uses a 30-second timeout, processes up to 10 messages per batch, and does not wait to build a larger batch. The source queue uses a 180-second visibility timeout.
+- DynamoDB uses on-demand `PAY_PER_REQUEST` billing.
+- The source queue keeps messages for four days. The quarantine queue and DLQ keep messages for fourteen days.
+- The service is named `drone-telemetry`, uses `dev` as its default stage and `local` for LocalStack, and gives every resource a stage-qualified name.
+- Docker uses the pinned LocalStack community image `localstack/localstack:4.14.0`.
 
 ## Verification
 
@@ -71,4 +72,15 @@ Add Docker Compose configuration to start LocalStack. Configure the Serverless L
 
 ## Completion Notes
 
-To be completed after implementation and review.
+- Added `serverless.yml` with the Lambda function, SQS source, quarantine and dead-letter queues, DynamoDB table and indexes, retry settings, environment variables, and stage-qualified names.
+- Added a dedicated Lambda role scoped to the source queue, quarantine queue, telemetry table, and processor log group. Added a separate producer policy that can only send to the source queue.
+- Added `compose.yaml` with LocalStack `4.14.0`, the required local AWS services, a health check, and Docker access required to create the Lambda.
+- Updated `.env.example` to match local resource names and documented `npx serverless deploy --stage local` in `test/integration/README.md` without claiming automated integration coverage.
+- `npx serverless print`, `npx serverless print --stage local`, `npx serverless package`, `docker compose config`, and the complete `npm test` suite pass on Node.js `v20.20.2` (40 tests).
+- `docker compose up -d` starts a healthy LocalStack container, and `npx serverless deploy --stage local` successfully deploys stack `drone-telemetry-local` with function `drone-telemetry-local-processor`.
+- Manually confirmed that the DynamoDB table is active, uses `eventId` as its primary key, uses on-demand billing, and has active `drone-history` and `health-errors` indexes with the expected keys.
+- Manually confirmed that the Lambda event-source mapping is enabled with a batch size of 10, no batching delay, and `ReportBatchItemFailures`.
+- Manually confirmed that the Lambda role can write only to its own logs and telemetry table, consume only from the source queue, and send only to quarantine, with no DLQ or wildcard permissions.
+- Manually confirmed that the source queue has a 180-second visibility timeout, four-day retention, and a redrive policy that sends messages to the DLQ after five receives.
+- Manually confirmed that the producer policy grants only `sqs:SendMessage` to the source queue.
+- Accepted by the user after automated and manual verification.

@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Review
 
 ## Dependencies
 
@@ -60,4 +60,15 @@ Finally, compare the implementation with the challenge requirements, accepted te
 
 ## Completion Notes
 
-To be completed after implementation and review.
+- Replaced the README template with a plain-language description of the completed architecture, event rules, storage and indexes, failure handling, logging, security, testing, assumptions, and local setup.
+- Added a valid example event and confirmed the documented GitHub clone URL.
+- Kept the production improvements brief and disclosed the Node.js and tooling trade-off, missing automated integration suite, and lack of a real AWS deployment.
+- Updated `AGENTS.md` with the final project structure and confirmed commands. Removed `.DS_Store` and added it to `.gitignore`.
+- Final LocalStack testing found that Lambda passes a callback as the handler's third argument. The handler had mistaken it for test dependencies, so real Lambda calls could not access the DynamoDB client. The handler now only accepts injected dependencies when the third argument is an object, and a regression test covers the Lambda callback shape.
+- Added a local-only Lambda service endpoint so the deployed function can reach LocalStack without changing normal AWS endpoints.
+- `npm ci` succeeds on Node.js `v20.20.2`. It reports the accepted Serverless v3 and LocalStack development dependency warnings and 11 audit findings.
+- `npm test` passes all 41 unit tests. `npx serverless print --stage local`, `npx serverless package`, and `docker compose config` also pass.
+- `docker compose up -d --wait` starts a healthy LocalStack container, and `npx serverless deploy --stage local` deploys the complete stack.
+- The README publish command sends a valid event to the source queue. LocalStack automatically invokes Lambda, and the event was confirmed in DynamoDB. `docker compose down` removes the local container and resources.
+- Compared the final implementation with the challenge, all accepted ADRs, and every active ticket. T-001's original placeholder integration command was intentionally superseded by the accepted T-006 decision not to claim an automated integration suite.
+- Automated integration tests and a real AWS deployment remain outside the accepted challenge scope.

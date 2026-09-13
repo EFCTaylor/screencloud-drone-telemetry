@@ -9,8 +9,7 @@
   },
   "packageManager": "npm@10.8.2",
   "scripts": {
-    "test": "jest test/unit",
-    "test:integration": "jest test/integration --runInBand"
+    "test": "jest test/unit"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "3.1128.0",

@@ -1,0 +1,164 @@
+service: drone-telemetry
+frameworkVersion: "3"
+configValidationMode: error
+
+plugins:
+  - serverless-localstack
+
+custom:
+  awsEndpoint:
+    local: http://localstack:4566
+    default: ""
+  localstack:
+    stages:
+      - local
+    host: http://localhost
+    edgePort: 4566
+    autostart: false
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${opt:region, "us-east-1"}
+  stage: ${opt:stage, "dev"}
+  timeout: 30
+  versionFunctions: false
+  environment:
+    LOCALSTACK_ENDPOINT: ${self:custom.awsEndpoint.${sls:stage}, self:custom.awsEndpoint.default}
+    DYNAMODB_TABLE_NAME: !Ref TelemetryTable
+    QUARANTINE_QUEUE_URL: !Ref QuarantineQueue
+  iam:
+    role: !GetAtt TelemetryProcessorRole.Arn
+
+functions:
+  processor:
+    name: ${self:service}-${sls:stage}-processor
+    handler: src/handler.handler
+    events:
+      - sqs:
+          arn: !GetAtt TelemetryQueue.Arn
+          batchSize: 10
+          maximumBatchingWindow: 0
+          functionResponseType: ReportBatchItemFailures
+
+resources:
+  Resources:
+    TelemetryProcessorRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-${sls:stage}-processor
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Policies:
+          - PolicyName: ${self:service}-${sls:stage}-processor
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource:
+                    Fn::Sub: arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${self:service}-${sls:stage}-processor:*
+                - Effect: Allow
+                  Action:
+                    - sqs:ReceiveMessage
+                    - sqs:DeleteMessage
+                    - sqs:GetQueueAttributes
+                  Resource: !GetAtt TelemetryQueue.Arn
+                - Effect: Allow
+                  Action:
+                    - sqs:SendMessage
+                  Resource: !GetAtt QuarantineQueue.Arn
+                - Effect: Allow
+                  Action:
+                    - dynamodb:PutItem
+                  Resource: !GetAtt TelemetryTable.Arn
+
+    TelemetryDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-dlq
+        MessageRetentionPeriod: 1209600
+
+    QuarantineQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-quarantine
+        MessageRetentionPeriod: 1209600
+
+    TelemetryQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-source
+        MessageRetentionPeriod: 345600
+        VisibilityTimeout: 180
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt TelemetryDeadLetterQueue.Arn
+          maxReceiveCount: 5
+
+    TelemetryTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${sls:stage}-events
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: eventId
+            AttributeType: S
+          - AttributeName: droneId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+          - AttributeName: errorIndexPk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: eventId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: drone-history
+            KeySchema:
+              - AttributeName: droneId
+                KeyType: HASH
+              - AttributeName: timestamp
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: health-errors
+            KeySchema:
+              - AttributeName: errorIndexPk
+                KeyType: HASH
+              - AttributeName: timestamp
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    TelemetryProducerPolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        ManagedPolicyName: ${self:service}-${sls:stage}-producer-send
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt TelemetryQueue.Arn
+
+  Outputs:
+    TelemetryQueueUrl:
+      Value: !Ref TelemetryQueue
+    QuarantineQueueUrl:
+      Value: !Ref QuarantineQueue
+    DeadLetterQueueUrl:
+      Value: !Ref TelemetryDeadLetterQueue
+    TelemetryTableName:
+      Value: !Ref TelemetryTable
+    ProducerPolicyArn:
+      Value: !Ref TelemetryProducerPolicy

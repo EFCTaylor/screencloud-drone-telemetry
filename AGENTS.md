@@ -2,10 +2,12 @@
 
 ## Current State
 
-- T-001 has bootstrapped the root Node.js project and Jest unit-test setup. Telemetry behaviour, Serverless configuration, Docker configuration, integration tests, and CI are not implemented yet.
-- Node.js `v20.20.2` is pinned in `.nvmrc` for Serverless Framework v3 Lambda runtime compatibility; the accepted implementation language is JavaScript, not TypeScript.
-- `npm ci` installs the pinned dependencies and `npm test` runs unit tests. The integration script is a T-001 placeholder, not a working suite, and is due to be retired in T-006; README commands such as `npm run dev` and `docker compose up -d` remain unverified template content.
-- Application modules belong in `src/`, unit tests in `test/unit/`, and LocalStack integration tests in `test/integration/`.
+- T-001 through T-006 are accepted. T-007 contains the final documentation and review work.
+- Node.js `v20.20.2` is pinned in `.nvmrc` for Serverless Framework v3 Lambda runtime compatibility; the implementation language is JavaScript, not TypeScript.
+- `src/telemetry.js` parses and validates events, `src/persistence.js` writes them to DynamoDB, and `src/handler.js` processes SQS batches and sends invalid data to quarantine.
+- `serverless.yml` defines the Lambda, queues, DynamoDB table, indexes, event-source mapping, and IAM permissions. `compose.yaml` starts LocalStack.
+- Unit tests are in `test/unit/`. Automated integration tests are not implemented; `test/integration/README.md` points to the proposed approach in the root README.
+- The confirmed commands are `npm ci`, `npm test`, `docker compose up -d --wait`, `npx serverless deploy --stage local`, the README example publish command, and `docker compose down`.
 - Files under `.opencode/` configure OpenCode; any manifest or lockfile there is not the application package manifest.
 
 ## Decision And Ticket Workflow
@@ -23,5 +25,5 @@
 - SQS/Lambda delivery and quarantine publication are at-least-once. A source record is acknowledged only after a quarantine publish succeeds; quarantine messages can be duplicated and carry the source SQS `messageId` plus `eventId` when available.
 - Return SQS partial batch failures only for retryable records. Persisted records, database duplicates, and successfully quarantined invalid records are successful outcomes.
 - DynamoDB idempotency is a conditional write on primary key `eventId`; duplicate writes are successful no-ops. The GSIs are `droneId`/`timestamp` and sparse `errorIndexPk=ERROR`/`timestamp` for `WARNING` or `CRITICAL` health events.
-- The LocalStack integration approach invokes the handler directly with SQS-shaped events, but automated integration tests are intentionally deferred. Do not claim the approach or implementation verifies Lambda polling, automatic invocation, visibility timing, or automatic DLQ redrive.
+- The proposed LocalStack integration approach would invoke the handler directly with SQS-shaped events, but automated integration tests are intentionally deferred. Do not claim that approach verifies Lambda polling, automatic invocation, visibility timing, or automatic DLQ redrive.
 - Structured logs must not include raw telemetry, coordinates, delivery/customer details, or unsanitized exception messages.

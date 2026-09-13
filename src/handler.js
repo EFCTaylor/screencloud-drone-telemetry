@@ -9,8 +9,10 @@ const { parseTelemetryEvent } = require("./telemetry");
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const awsClientConfig = process.env.AWS_ENDPOINT_URL
-  ? { endpoint: process.env.AWS_ENDPOINT_URL }
+const awsEndpoint =
+  process.env.LOCALSTACK_ENDPOINT || process.env.AWS_ENDPOINT_URL;
+const awsClientConfig = awsEndpoint
+  ? { endpoint: awsEndpoint }
   : {};
 
 const defaultDependencies = {
@@ -158,14 +160,18 @@ async function processRecord(record, awsRequestId, dependencies) {
   }
 }
 
-async function handler(sqsEvent, context, dependencies = defaultDependencies) {
+async function handler(sqsEvent, context, dependencies) {
+  const handlerDependencies =
+    dependencies && typeof dependencies === "object"
+      ? dependencies
+      : defaultDependencies;
   const batchItemFailures = [];
 
   for (const record of sqsEvent.Records) {
     const shouldRetry = await processRecord(
       record,
       context.awsRequestId,
-      dependencies,
+      handlerDependencies,
     );
 
     if (shouldRetry) {

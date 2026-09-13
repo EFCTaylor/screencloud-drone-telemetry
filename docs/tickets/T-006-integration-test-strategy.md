@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Done
 
 ## Dependencies
 
@@ -52,4 +52,9 @@ Do not build these integration tests as part of this challenge. Remove or clearl
 
 ## Completion Notes
 
-To be completed after implementation and review.
+- Documented the proposed LocalStack integration-test setup, direct-handler workflow, test isolation, cleanup, eventual-consistency handling, and required scenarios in the root README.
+- Clearly documented that the suite was not implemented or run and that direct invocation does not verify Lambda polling, automatic invocation, visibility timing, source-message acknowledgement, or DLQ redrive.
+- Removed the placeholder `test:integration` npm script and updated `test/integration/README.md` so it cannot be mistaken for an implemented suite.
+- Manually compared the strategy with ADR 0009, `serverless.yml`, and the implemented handler and persistence behaviour.
+- `npm test` passes on the pinned Node.js `v20.20.2` runtime (40 tests).
+- Accepted by the user after documentation review and verification.
